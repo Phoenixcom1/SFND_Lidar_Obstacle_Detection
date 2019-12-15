@@ -1,6 +1,7 @@
 // PCL lib Functions for processing point clouds 
 
 #include "processPointClouds.h"
+#include <cmath>
 #include <unordered_set>
 
 
@@ -109,121 +110,110 @@ std::pair<typename pcl::PointCloud<PointT>::Ptr, typename pcl::PointCloud<PointT
     // Time segmentation process
     auto startTime = std::chrono::steady_clock::now();
 
-    pcl::PointIndices::Ptr inliers (new pcl::PointIndices ());
-    std::unordered_set<int> inliers_tmp;
-    	//initialize the random seed
-    	srand ( time(NULL) );
-    	// model points and parameters
-    	int idx_p1, idx_p2, idx_p3;
-    	float a,b,c,d,dis;
-    	std::vector<float> v1,v2,vn;
+	std::unordered_set<int> inliersResult;
+	//initialize the random seed
+	std::srand(std::time(nullptr));
 
-    	/*
-    	 * Ensuring that the input cloud is big enough to find a model
-    	 * */
-    	if(cloud->points.size() > 3){
+	/*
+	 * Ensuring that the input cloud is big enough to find a model
+	 * */
+	if(cloud->points.size() > 3){
 
-    		while(maxIterations--){
-    			inliers_tmp.clear();
+		while(maxIterations--){
 
-    			/*
-    			 * Picking randomly two points while making sure that a point didn't got choosen twice (items of set must be unique to be added)
-    			 * */
-    			while(inliers_tmp.size() < 3){
-    				inliers_tmp.insert(rand() % cloud->points.size());
-    			}
-    			// Randomly sample subset and fit line
-    			auto itr = inliers_tmp.begin();
-    			idx_p1 = *itr;
-    			*itr++;
-    			idx_p2 = *itr;
-    			*itr++;
-    			idx_p3 = *itr;
+			std::unordered_set<int> inliers_tmp;
+			//inliers_tmp.clear();
+
+			/*
+			 * Picking randomly two points while making sure that a point didn't got choosen twice (items of set must be unique to be added)
+			 * */
+			while(inliers_tmp.size() < 3){
+				inliers_tmp.insert(rand() % cloud->points.size());
+			}
+			// Randomly sample subset and fit line
+			auto itr = inliers_tmp.begin();
+			int idx_p1 = *itr;
+			int idx_p2 = *(++itr);
+			int idx_p3 = *(++itr);
+
+			auto p1 = cloud->points[idx_p1];
+			auto p2 = cloud->points[idx_p2];
+			auto p3 = cloud->points[idx_p3];
 
 
-    			/*
-    			 * Defining vector 1
-    			 * v1 = < 	x2−x1,
-    			 * 			y2−y1,
-    			 * 			z2−z1	>
-    			 * */
-    			v1.push_back(cloud->points[idx_p2].x - cloud->points[idx_p1].x);
-    			v1.push_back(cloud->points[idx_p2].y - cloud->points[idx_p1].y);
-    			v1.push_back(cloud->points[idx_p2].z - cloud->points[idx_p1].z);
+			/*
+			 *Defining vector 1
+			 * v1 = < 	x2−x1,
+			 * 			y2−y1,
+			 * 			z2−z1	>
+			 * */
+			std::vector<double> v1{p2.x - p1.x, p2.y - p1.y, p2.z - p1.z};
+			/*
+			 *Defining vector 2
+			 * v2 = <	x3−x1,
+			 * 			y3−y1,
+			 * 			z3−z1	>
+			 * */
+			std::vector<double> v2{p3.x - p1.x, p3.y - p1.y, p3.z - p1.z};
 
-    			/*
-    			 * Defining vector 2
-    			 * v2 = <	x3−x1,
-    			 * 			y3−y1,
-    			 * 			z3−z1	>
-    			 * */
-    			v2.push_back(cloud->points[idx_p3].x - cloud->points[idx_p1].x);
-    			v2.push_back(cloud->points[idx_p3].y - cloud->points[idx_p1].y);
-    			v2.push_back(cloud->points[idx_p3].z - cloud->points[idx_p1].z);
+			/*
+			 * Calculating the normal vector for the plane
+			 * by cross product of	vn = v1 × v2 =
+			 *			<
+			 *				(v1.y * v2.z) - (v1.z * v2.y),
+			 *				(v1.z * v2.x) - (v1.x * v2.z),
+			 *				(v1.x * v2.y) - (v1.y * v2.x)	>
+			 *		=
+			 * 			<	(y2−y1)(z3−z1) − (z2−z1)(y3−y1),
+			 * 				(z2-z1)(x3-x1) - (x2-x1)(z3-z1),
+			 * 				(x2−x1)(y3−y1) − (y2−y1)(x3−x1)	>
+			 *
+			 * 				vn = v1 × v2 = < i,j,k >
+			 * */
 
-    			/*
-    			 * Calculating the normal vector for the plane
-    			 * by cross product of	vn = v1 × v2 =
-    			 *			<
-    			 *				(v1.y * v2.z) - (v1.z * v2.y),
-    			 *				(v1.z * v2.x) - (v1.x * v2.z),
-    			 *				(v1.x * v2.y) - (v1.y * v2.x)	>
-    			 *		=
-    			 * 			<	(y2−y1)(z3−z1) − (z2−z1)(y3−y1),
-    			 * 				(z2-z1)(x3-x1) - (x2-x1)(z3-z1),
-    			 * 				(x2−x1)(y3−y1) − (y2−y1)(x3−x1)	>
-    			 *
-    			 * 				vn = v1 × v2 = < i,j,k >
-    			 * */
+			/*
+			 * plane formula
+			 * Ax + By + Cz + D = 0
+			 * for given values:
+			 *
+			 * 		i(x−x1) + j(y−y1) + k(z−z1) = 0,
+			 * 		ix + jy + kz − (ix1 + jy1 + kz1) = 0
+			 * 			A=i,
+			 * 			B=j,
+			 * 			C=k,
+			 * 			D=−(ix1+jy1+kz1)
+			 *
+			 */
+			double a = v1[1] * v2[2] - v1[2] * v2[1];
+			double b = v1[2] * v2[0] - v1[0] * v2[2];
+			double c = v1[0] * v2[1] - v1[1] * v2[0];
+			double d = -(a * p1.x + b * p1.y + c * p1.z);
 
-    			vn.push_back(v1[1] * v2[2] - v1[2] * v2[1]);
-    			vn.push_back(v1[2] * v2[0] - v1[0] * v2[2]);
-    			vn.push_back(v1[0] * v2[1] - v1[1] * v2[0]);
+			//std::cout << "a " << a << std::endl;
 
-    			/*
-    			 * plane formula
-    			 * Ax + By + Cz + D = 0
-    			 * for given values:
-    			 *
-    			 * 		i(x−x1) + j(y−y1) + k(z−z1) = 0,
-    			 * 		ix + jy + kz − (ix1 + jy1 + kz1) = 0
-    			 * 			A=i,
-    			 * 			B=j,
-    			 * 			C=k,
-    			 * 			D=−(ix1+jy1+kz1)
-    			 *
-    			 */
-    			a = vn[0];
-    			b = vn[1];
-    			c = vn[2];
-    			d = -(vn[0]*cloud->points[idx_p1].x + vn[1]*cloud->points[idx_p1].y + vn[2]*cloud->points[idx_p1].z);
-
-    			// Measure distance between every point and fitted line
-    			for(int i = 0; i < cloud->points.size(); i++){
-    				/*
-    				 * calculating distance for a point to the line model
-    				 * Distance d = |Ax+By+Cz+D|/sqrt(A^2+B^2+C^2)
-    				 * */
-    				dis = std::fabs(a*cloud->points[i].x + b*cloud->points[i].y + c*cloud->points[i].z + d) / std::sqrt(std::pow(a,2) + std::pow(b,2) + std::pow(c,2));
-
-    				// If distance is smaller than threshold count this index as inlier
-    				if(dis <= distanceThreshold){
-    					inliers_tmp.insert(i);
-    				}
-    			}
-    			/*
-    			 * If this round has more inliers and therefore a better model, take it as best fit
-    			 */
-
-    			if(inliers->indices.size() < inliers_tmp.size()){
-    				inliers->indices.clear();
-    				inliers->indices.insert(inliers->indices.end(), inliers_tmp.begin(), inliers_tmp.end());
-    			}
-
-    		}
-
-    	}
-
+			// Measure distance between every point and fitted line
+			for (size_t i = 0; i < cloud->points.size(); ++i) {
+				const auto &p = cloud->points[i];
+				/*
+				 * calculating distance for a point to the line model
+				 * Distance d = |Ax+By+Cz+D|/sqrt(A^2+B^2+C^2)
+				 * */
+				double dis = std::abs(a * p.x + b * p.y + c * p.z + d) / std::sqrt(a * a + b * b + c * c);
+				// If distance is smaller than threshold count this index as inlier
+				if (dis < distanceThreshold) {
+				  inliers_tmp.insert(i);
+				}
+			}
+			/*
+			 * If this round has more inliers and therefore a better model, take it as best fit
+			 */
+			if (inliersResult.size() < inliers_tmp.size()) {
+				inliersResult = inliers_tmp;
+			}
+		}
+	}
+	pcl::PointIndices::Ptr inliers{new pcl::PointIndices()};
+	inliers->indices = std::vector<int>(inliersResult.begin(), inliersResult.end());
 
 
     auto endTime = std::chrono::steady_clock::now();
