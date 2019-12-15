@@ -248,13 +248,14 @@ std::vector<typename pcl::PointCloud<PointT>::Ptr> ProcessPointClouds<PointT>::C
 	ec.setInputCloud (cloud);
 	ec.extract (cluster_indices);
 
+	for (pcl::PointIndices getIndices: cluster_indices){
 
-	for (std::vector<pcl::PointIndices>::const_iterator it = cluster_indices.begin (); it != cluster_indices.end (); ++it)
-	{
 		pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_cluster (new pcl::PointCloud<pcl::PointXYZ>);
-		for (std::vector<int>::const_iterator pit = it->indices.begin (); pit != it->indices.end (); ++pit){
-			cloud_cluster->points.push_back (cloud->points[*pit]); //*
+
+		for(int index : getIndices.indices){
+			cloud_cluster->points.push_back (cloud->points[index]);
 		}
+
 		cloud_cluster->width = cloud_cluster->points.size ();
 		cloud_cluster->height = 1;
 		cloud_cluster->is_dense = true;
