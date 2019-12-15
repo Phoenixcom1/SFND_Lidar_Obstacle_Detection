@@ -7,6 +7,8 @@
 #include "processPointClouds.h"
 // using templates for processPointClouds so also include .cpp to help linker
 #include "processPointClouds.cpp"
+#include <unordered_set>
+
 
 std::vector<Car> initHighway(bool renderScene, pcl::visualization::PCLVisualizer::Ptr& viewer)
 {
@@ -52,13 +54,14 @@ void simpleHighway(pcl::visualization::PCLVisualizer::Ptr& viewer)
     //renderPointCloud(viewer, inputCloud, "inputCloud");
     //renderRays(viewer, lidar_sensor->position, inputCloud);
 
+
     ProcessPointClouds<pcl::PointXYZ> pcc;
-    std::pair<pcl::PointCloud<pcl::PointXYZ>::Ptr, pcl::PointCloud<pcl::PointXYZ>::Ptr> segmentCloud = pcc.SegmentPlane(inputCloud, 100, 0.2);
+    std::pair<pcl::PointCloud<pcl::PointXYZ>::Ptr, pcl::PointCloud<pcl::PointXYZ>::Ptr> segmentCloud = pcc.SegmentPlaneSelf(inputCloud, 100, 0.2);
     renderPointCloud(viewer, segmentCloud.second, "obstacleCloud", Color(1,0,0));
     renderPointCloud(viewer, segmentCloud.first, "planeCloud", Color(0,1,0));
+
   
 }
-
 
 //setAngle: SWITCH CAMERA ANGLE {XY, TopDown, Side, FPS}
 void initCamera(CameraAngle setAngle, pcl::visualization::PCLVisualizer::Ptr& viewer)
