@@ -34,8 +34,6 @@ struct KdTree
 	//dim_comp describes the dimension to compare agains, x or y dimension represented by index 0 or 1 within the point vector
 	void insertHelper(Node *&node, unsigned char dim_comp, std::vector<float> point, int id)
 	{
-		std::cout << "node" << node << std::endl;
-		std::cout << "dim_comp" << dim_comp << std::endl;
 
 		if(NULL == node)
 		{
@@ -56,9 +54,51 @@ struct KdTree
 	std::vector<int> search(std::vector<float> target, float distanceTol)
 	{
 		std::vector<int> ids;
+
+		searchHelper(root, 0, target, distanceTol, &ids);
+
 		return ids;
 	}
 	
+	//dim_comp describes the dimension to compare agains, x or y dimension represented by index 0 or 1 within the point vector
+	void searchHelper(Node *&node, unsigned char dim_comp, std::vector<float> target, float distanceTol, std::vector<int>* ids)
+	{
+
+		if(NULL != node)
+		{
+
+			//reference point is within box on one dimension
+			if((target[dim_comp]-distanceTol) <= node->point[dim_comp] && (target[dim_comp]+distanceTol) >= node->point[dim_comp]
+				&& (target[!dim_comp]-distanceTol) <= node->point[!dim_comp] && (target[!dim_comp]+distanceTol) >=  node->point[!dim_comp] )
+			{
+				float distance = sqrt((node->point[0] - target[0]) * (node->point[0] - target[0]) + (node->point[1] - target[1]) * (node->point[1] - target[1]));
+				if(distance <= distanceTol)
+				{
+					ids->push_back(node->id);
+				}
+			}
+
+
+			if((target[dim_comp]-distanceTol) < node->point[dim_comp])
+			{
+				//reference point is left/below target box
+
+				searchHelper(node->right, !dim_comp, target, distanceTol, ids);
+			}
+			if((target[dim_comp]+distanceTol) > node->point[dim_comp])
+			{
+				//reference point is right/above target box
+				searchHelper(node->left, !dim_comp, target, distanceTol, ids);
+			}
+
+		}
+
+
+
+	}
+
+
+
 
 };
 
