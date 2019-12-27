@@ -27,8 +27,28 @@ struct KdTree
 
 	void insert(std::vector<float> point, int id)
 	{
-		// TODO: Fill in this function to insert a new point into the tree
-		// the function should create a new node and place correctly with in the root 
+		insertHelper(root, 0, point,id);
+
+	}
+
+	//dim_comp describes the dimension to compare agains, x or y dimension represented by index 0 or 1 within the point vector
+	void insertHelper(Node *&node, unsigned char dim_comp, std::vector<float> point, int id)
+	{
+		std::cout << "node" << node << std::endl;
+		std::cout << "dim_comp" << dim_comp << std::endl;
+
+		if(NULL == node)
+		{
+			node = new Node(point, id);
+		}
+		else if(point[dim_comp] < node->point[dim_comp])
+		{
+			insertHelper(node->left, !dim_comp, point, id);
+		}
+		else
+		{
+			insertHelper(node->right, !dim_comp, point, id);
+		}
 
 	}
 
