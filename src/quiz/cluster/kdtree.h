@@ -49,57 +49,46 @@ struct KdTree
 		}
 
 	}
-
-	// return a list of point ids in the tree that are within distance of target
-	std::vector<int> search(std::vector<float> target, float distanceTol)
-	{
-		std::vector<int> ids;
-
-		searchHelper(root, 0, target, distanceTol, &ids);
-
-		return ids;
-	}
 	
 	//dim_comp describes the dimension to compare agains, x or y dimension represented by index 0 or 1 within the point vector
-	void searchHelper(Node *&node, unsigned char dim_comp, std::vector<float> target, float distanceTol, std::vector<int>* ids)
+	void searchHelper(Node *&node, unsigned char dim_comp, std::vector<float> target, float distanceTol, std::vector<int>& ids)
 	{
 
 		if(NULL != node)
 		{
 
 			//reference point is within box on one dimension
-			if((target[dim_comp]-distanceTol) <= node->point[dim_comp] && (target[dim_comp]+distanceTol) >= node->point[dim_comp]
-				&& (target[!dim_comp]-distanceTol) <= node->point[!dim_comp] && (target[!dim_comp]+distanceTol) >=  node->point[!dim_comp] )
+			if(node->point[0] >= (target[0]-distanceTol) && node->point[0] <= (target[0]+distanceTol)
+				&& node->point[1] >= (target[1]-distanceTol) && node->point[1] <= (target[1]+distanceTol) )
 			{
-				float distance = sqrt((node->point[0] - target[0]) * (node->point[0] - target[0]) + (node->point[1] - target[1]) * (node->point[1] - target[1]));
+				float distance = sqrt((node->point[0] - target[0]) * (node->point[0] - target[0])
+									+ (node->point[1] - target[1]) * (node->point[1] - target[1]));
 				if(distance <= distanceTol)
 				{
-					ids->push_back(node->id);
+					ids.push_back(node->id);
 				}
 			}
 
 
 			if((target[dim_comp]-distanceTol) < node->point[dim_comp])
 			{
-				//reference point is left/below target box
-
-				searchHelper(node->right, !dim_comp, target, distanceTol, ids);
+				searchHelper(node->left, !dim_comp, target, distanceTol, ids);
 			}
 			if((target[dim_comp]+distanceTol) > node->point[dim_comp])
 			{
-				//reference point is right/above target box
-				searchHelper(node->left, !dim_comp, target, distanceTol, ids);
+				searchHelper(node->right, !dim_comp, target, distanceTol, ids);
 			}
-
 		}
-
-
-
 	}
 
+	// return a list of point ids in the tree that are within distance of target
+	std::vector<int> search(std::vector<float> target, float distanceTol)
+	{
+		std::vector<int> ids;
+		searchHelper(root, 0, target, distanceTol, ids);
 
-
-
+		return ids;
+	}
 };
 
 
