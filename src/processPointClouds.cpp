@@ -5,6 +5,7 @@
 #include <unordered_set>
 
 
+
 //constructor:
 template<typename PointT>
 ProcessPointClouds<PointT>::ProcessPointClouds() {}
@@ -25,17 +26,63 @@ void ProcessPointClouds<PointT>::numPoints(typename pcl::PointCloud<PointT>::Ptr
 template<typename PointT>
 typename pcl::PointCloud<PointT>::Ptr ProcessPointClouds<PointT>::FilterCloud(typename pcl::PointCloud<PointT>::Ptr cloud, float filterRes, Eigen::Vector4f minPoint, Eigen::Vector4f maxPoint)
 {
-
     // Time segmentation process
     auto startTime = std::chrono::steady_clock::now();
 
-    // TODO:: Fill in the function to do voxel grid point reduction and region based filtering
+
+    //reducing cloud to voxels
+    pcl::VoxelGrid<PointT> sor;
+    typename pcl::PointCloud<PointT>::Ptr cloud_filtered(new pcl::PointCloud<PointT>);
+    sor.setInputCloud(cloud);
+    sor.setLeafSize(filterRes, filterRes, filterRes);
+    sor.filter(*cloud_filtered);
+
+
+    //croping out the environment we are interested in
+    typename pcl::PointCloud<PointT>::Ptr cloudROI(new pcl::PointCloud<PointT>);
+
+    pcl::CropBox<PointT> region(true);
+    region.setMin(minPoint);
+    region.setMax(maxPoint);
+    region.setInputCloud(cloud_filtered);
+    region.filter(*cloudROI);
+
+
+    //gathering the reflections (points) of the cars roof
+    std::vector<int> roofIndices;
+
+    pcl::CropBox<PointT> roof(true);
+    roof.setMin(Eigen::Vector4f(-1.5, -1.7, -1, 1));
+    roof.setMax(Eigen::Vector4f(2.6, 1.7, -0.4, 1));
+    roof.setInputCloud(cloudROI);
+    roof.filter(roofIndices);
+
+    /*
+    std::cout << "indices of roof points " << std::endl;
+    for (std::vector<int>::const_iterator i = indices.begin(); i != indices.end(); ++i)
+        std::cout << *i << ' ';
+    std::cout << std::endl;
+	*/
+
+    pcl::PointIndices::Ptr roofPoints {new pcl::PointIndices};
+
+    for(int point : roofIndices)
+    {
+        roofPoints->indices.push_back(point);
+    }
+
+    pcl::ExtractIndices<PointT> extract;
+    extract.setInputCloud(cloudROI);
+    extract.setIndices(roofPoints);
+    extract.setNegative(true);
+    extract.filter(*cloudROI);
+
 
     auto endTime = std::chrono::steady_clock::now();
     auto elapsedTime = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime);
     std::cout << "filtering took " << elapsedTime.count() << " milliseconds" << std::endl;
 
-    return cloud;
+    return cloudROI;
 
 }
 
