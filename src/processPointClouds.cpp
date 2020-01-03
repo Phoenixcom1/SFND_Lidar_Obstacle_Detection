@@ -307,7 +307,7 @@ std::vector<typename pcl::PointCloud<PointT>::Ptr> ProcessPointClouds<PointT>::C
 		cloud_cluster->height = 1;
 		cloud_cluster->is_dense = true;
 
-		std::cout << "PointCloud representing the Cluster: " << cloud_cluster->points.size () << " data points." << std::endl;
+		//std::cout << "PointCloud representing the Cluster: " << cloud_cluster->points.size () << " data points." << std::endl;
 		clusters.push_back(cloud_cluster);
 	}
 
