@@ -318,6 +318,63 @@ std::vector<typename pcl::PointCloud<PointT>::Ptr> ProcessPointClouds<PointT>::C
     return clusters;
 }
 
+template<typename PointT>
+std::vector<typename pcl::PointCloud<PointT>::Ptr> ProcessPointClouds<PointT>::ClusteringSelf(typename pcl::PointCloud<PointT>::Ptr cloud, float distanceTol, int minSize, int maxSize)
+{
+    // Time clustering process
+    auto startTime = std::chrono::steady_clock::now();
+
+    std::vector<typename pcl::PointCloud<PointT>::Ptr> clusters;
+    std::vector<bool> processed(cloud->points.size(), false);
+
+    auto* tree = new KdTree;
+
+    for (int i =0; i<cloud->points.size(); i++)
+        tree->insert(cloud->points[i],i);
+
+    int i = 0;
+    while(i < cloud->points.size())
+    {
+        if(processed[i])
+        {
+            i++;
+            continue;
+        }
+
+        typename pcl::PointCloud<PointT>::Ptr cluster{new pcl::PointCloud<PointT>};
+
+        clusterHelper(i, cloud, cluster, processed, tree, distanceTol);
+        clusters.push_back(cluster);
+        i++;
+    }
+
+
+    auto endTime = std::chrono::steady_clock::now();
+    auto elapsedTime = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime);
+    std::cout << "clustering took " << elapsedTime.count() << " milliseconds and found " << clusters.size() << " clusters" << std::endl;
+
+    return clusters;
+}
+
+template<typename PointT>
+void ProcessPointClouds<PointT>::clusterHelper(int index, typename pcl::PointCloud<PointT>::Ptr cloud, typename pcl::PointCloud<PointT>::Ptr& cluster, std::vector<bool> &processed, KdTree *tree, float distanceTol)
+{
+    processed[index] = true;
+    cluster->points.push_back(cloud->points[index]);
+
+    std::vector<int> nearbys = tree->search(cloud->points[index], distanceTol);
+
+    for(int id : nearbys)
+    {
+        if(!processed[id])
+        {
+            clusterHelper(id, cloud, cluster, processed, tree, distanceTol);
+        }
+
+    }
+
+
+}
 
 template<typename PointT>
 Box ProcessPointClouds<PointT>::BoundingBox(typename pcl::PointCloud<PointT>::Ptr cluster)
@@ -375,3 +432,5 @@ std::vector<boost::filesystem::path> ProcessPointClouds<PointT>::streamPcd(std::
     return paths;
 
 }
+
+
