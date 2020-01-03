@@ -8,12 +8,12 @@
 
 //constructor:
 template<typename PointT>
-ProcessPointClouds<PointT>::ProcessPointClouds() {}
+ProcessPointClouds<PointT>::ProcessPointClouds() = default;
 
 
 //de-constructor:
 template<typename PointT>
-ProcessPointClouds<PointT>::~ProcessPointClouds() {}
+ProcessPointClouds<PointT>::~ProcessPointClouds() = default;
 
 
 template<typename PointT>
@@ -136,7 +136,7 @@ std::pair<typename pcl::PointCloud<PointT>::Ptr, typename pcl::PointCloud<PointT
     // Segment the largest planar component from the remaining cloud
     seg.setInputCloud (cloud);
     seg.segment (*inliers, *coefficients);
-    if (inliers->indices.size () == 0)
+    if (inliers->indices.empty())
     {
       std::cerr << "Could not estimate a planar model for the given dataset." << std::endl;
     }
@@ -283,11 +283,11 @@ std::vector<typename pcl::PointCloud<PointT>::Ptr> ProcessPointClouds<PointT>::C
     std::vector<typename pcl::PointCloud<PointT>::Ptr> clusters;
 
     // Creating the KdTree object for the search method of the extraction
-	pcl::search::KdTree<pcl::PointXYZ>::Ptr tree (new pcl::search::KdTree<pcl::PointXYZ>);
+	pcl::search::KdTree<pcl::PointXYZI>::Ptr tree (new pcl::search::KdTree<pcl::PointXYZI>);
 	tree->setInputCloud (cloud);
 
 	std::vector<pcl::PointIndices> cluster_indices;
-	pcl::EuclideanClusterExtraction<pcl::PointXYZ> ec;
+	pcl::EuclideanClusterExtraction<pcl::PointXYZI> ec;
 	ec.setClusterTolerance (clusterTolerance); // 2cm
 	ec.setMinClusterSize (minSize);
 	ec.setMaxClusterSize (maxSize);
@@ -295,9 +295,9 @@ std::vector<typename pcl::PointCloud<PointT>::Ptr> ProcessPointClouds<PointT>::C
 	ec.setInputCloud (cloud);
 	ec.extract (cluster_indices);
 
-	for (pcl::PointIndices getIndices: cluster_indices){
+	for (const pcl::PointIndices& getIndices: cluster_indices){
 
-		pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_cluster (new pcl::PointCloud<pcl::PointXYZ>);
+		pcl::PointCloud<pcl::PointXYZI>::Ptr cloud_cluster (new pcl::PointCloud<pcl::PointXYZI>);
 
 		for(int index : getIndices.indices){
 			cloud_cluster->points.push_back (cloud->points[index]);
@@ -327,7 +327,7 @@ Box ProcessPointClouds<PointT>::BoundingBox(typename pcl::PointCloud<PointT>::Pt
     PointT minPoint, maxPoint;
     pcl::getMinMax3D(*cluster, minPoint, maxPoint);
 
-    Box box;
+    Box box{};
     box.x_min = minPoint.x;
     box.y_min = minPoint.y;
     box.z_min = minPoint.z;
