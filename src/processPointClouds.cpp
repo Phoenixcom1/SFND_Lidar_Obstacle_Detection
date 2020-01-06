@@ -166,15 +166,16 @@ std::pair<typename pcl::PointCloud<PointT>::Ptr, typename pcl::PointCloud<PointT
 	 * */
 	if(cloud->points.size() > 3){
 
-		while(maxIterations--){
-
-			std::unordered_set<int> inliers_tmp;
-			//inliers_tmp.clear();
+        std::unordered_set<int> inliers_tmp;
+		while(maxIterations--)
+        {
+			inliers_tmp.clear();
 
 			/*
 			 * Picking randomly two points while making sure that a point didn't got choosen twice (items of set must be unique to be added)
 			 * */
-			while(inliers_tmp.size() < 3){
+			while(inliers_tmp.size() < 3)
+			{
 				inliers_tmp.insert(rand() % cloud->points.size());
 			}
 			// Randomly sample subset and fit line
@@ -260,7 +261,10 @@ std::pair<typename pcl::PointCloud<PointT>::Ptr, typename pcl::PointCloud<PointT
 		}
 	}
 	pcl::PointIndices::Ptr inliers{new pcl::PointIndices()};
-	inliers->indices = std::vector<int>(inliersResult.begin(), inliersResult.end());
+    for(int i: inliersResult)
+    {
+        inliers->indices.push_back(i);
+    }
 
 
     auto endTime = std::chrono::steady_clock::now();
@@ -319,19 +323,19 @@ std::vector<typename pcl::PointCloud<PointT>::Ptr> ProcessPointClouds<PointT>::C
 }
 
 template<typename PointT>
-std::vector<typename pcl::PointCloud<PointT>::Ptr> ProcessPointClouds<PointT>::ClusteringSelf(typename pcl::PointCloud<PointT>::Ptr cloud, float distanceTol, int minSize, int maxSize)
-{
+std::vector<typename pcl::PointCloud<PointT>::Ptr> ProcessPointClouds<PointT>::ClusteringSelf(typename pcl::PointCloud<PointT>::Ptr cloud, float distanceTol, int minSize, int maxSize) {
     // Time clustering process
     auto startTime = std::chrono::steady_clock::now();
 
     std::vector<typename pcl::PointCloud<PointT>::Ptr> clusters;
     std::vector<bool> processed(cloud->points.size(), false);
 
-    auto* tree = new KdTree;
+    auto *tree = new KdTree;
 
-    for (int i =0; i<cloud->points.size(); i++)
-        tree->insert(cloud->points[i],i);
-
+    for(int i = 0; i < cloud->points.size(); i++)
+    {
+        tree->insert(cloud->points[i], i);
+    }
     int i = 0;
     while(i < cloud->points.size())
     {
@@ -344,7 +348,10 @@ std::vector<typename pcl::PointCloud<PointT>::Ptr> ProcessPointClouds<PointT>::C
         typename pcl::PointCloud<PointT>::Ptr cluster{new pcl::PointCloud<PointT>};
 
         clusterHelper(i, cloud, cluster, processed, tree, distanceTol);
-        clusters.push_back(cluster);
+        if(cluster->size() >= minSize && cluster->size() <= maxSize)
+        {
+            clusters.push_back(cluster);
+        }
         i++;
     }
 
